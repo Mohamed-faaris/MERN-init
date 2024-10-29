@@ -1,10 +1,10 @@
 {
-  "name": "mern-app",
+  "name": "mern-init",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "install-all": "npm install --prefix backend && npm install --prefix frontend"
+    "install-all": "npm --prefix backend install && npm --prefix frontend install"
   },
   "keywords": [],
   "author": "",
