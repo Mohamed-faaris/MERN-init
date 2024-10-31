@@ -58,10 +58,20 @@ app.post("/createTestTask", async(req, res) => {
 });
 
 app.post("/createTask", async(req, res) => {
-  console.log("@createTasks ");
+  console.log("@createTask ");
   try {
     const task = new Task(req.body);
     await task.save();
+    res.status(200).json({"status":"success","task":await Task.findOne().sort({ createdAt: -1 })});
+  } catch (error) {
+    res.status(400).json({"status":"failed", ...error});
+  }
+});
+
+app.put("/editTask", async(req, res) => {
+  console.log("@editTask ");
+  try {
+    const updatedTask = await Task.findByIdAndUpdate(req.body["_id"],req.body,{ new: true });
     res.status(200).json({"status":"success","task":await Task.findOne().sort({ createdAt: -1 })});
   } catch (error) {
     res.status(400).json({"status":"failed", ...error});
