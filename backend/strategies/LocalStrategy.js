@@ -1,29 +1,33 @@
 import passport from "passport";
+import { Strategy } from "passport-local";
+import { User } from "../mongoose/schemas/user.mjs";
+import { comparePassword } from "../utils/helpers.mjs";
 
+passport.serializeUser((user, done) => {
+	done(null, user.email);
+});
 
-    new LocalStrategy((username, password, done) => {
-      const user = users.find((u) => u.username === username);
-      if (!user) 
-        {
-        return done(null, false, { message: 'Incorrect username.' });
-      }
-      bcrypt.compare(password, user.password, (err, isMatch) => {
-        if (err) throw err;
-        if (isMatch) {
-          return done(null, user);
-        } else {    
-          return done(null, false, { message: 'Incorrect password.' });
-        }
-      });
-    });
-  
-  // Serialize user
-  passport.serializeUser((user, done) => {
-    done(null, user.id);
-  });
-  
-  // Deserialize user
-  passport.deserializeUser((id, done) => {
-    const user = users.find((u) => u.id === id);
-    done(null, user);
-  });
+passport.deserializeUser(async (userEmail, done) => {
+	try {
+		const user = await User.findOne({email:userEmail});
+		if (!user) throw new Error("User Not Found");
+		done(null, user);
+	} catch (err) {
+		done(err, null);
+	}
+});
+
+export default passport.use(
+	new Strategy(async (email, password, done) => {
+		try {
+			const user = await User.findOne({ email });
+			if (!user) 
+                throw new Error("User not found");
+			if (!comparePassword(password, user.passwordHash))
+				throw new Error("Bad Credentials");
+			done(null, user);
+		} catch (err) {
+			done(err, null);
+		}
+	})
+);
