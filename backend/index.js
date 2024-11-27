@@ -1,31 +1,38 @@
 import dotenv from 'dotenv'; 
 import express from 'express';
 import mongoose from 'mongoose';
+import session from "express-session";
+import passport from "passport";
 
 dotenv.config({ path: './config/.env' }); 
 
-const app = express();
-app.use(express.json());
-
+//environment constants
 const mongoDatabaseURL = process.env.mongoDatabaseURL;
 const SERVER_PORT = process.env.SERVER_PORT
+const SECRET = process.env.SECRET || "default_secret";
 
-const taskSchema = new mongoose.Schema({
-  title:{type:String , required:true,unique:true} ,
-  description:{type:String , required:true},
-  priority:{type:Number,default:5},
-  deadline:{type:Date}
-})
+const app = express();
 
-const Task = new mongoose.model("Task",taskSchema);
+//middlewares
+app.use(express.json());
 
-const userTaskState=mongoose.Schema({
-  Key:{type:Number,required:true},
-  completedAt:{type:Date,default:null},
-  seenAt:{type:Date,default:null},
-  thrownToBinAt:{type:Boolean,default:false}
-})
-  
+app.use(app.use(
+  session({
+    secret:SECRET,
+    saveUninitialized: false,
+    resave: false, 
+    cookie: {
+      maxAge: 60000 * 60, // 1 hour
+    },
+    store: MongoStore.create({
+      client: mongoose.connection.getClient(), // Reuse existing Mongoose client
+    }),
+  })
+));
+
+
+
+
 
 async function mongooseConnect() {
   try {
@@ -62,7 +69,7 @@ app.post("/createTask", async(req, res) => {
   try {
     const task = new Task(req.body);
     await task.save();
-    res.status(200).json({"status":"success","task":await Task.findOne().sort({ createdAt: -1 })});
+    res.status(200).json({"status":"success","task":await Task.findOne().sort({ _id: -1 })});
   } catch (error) {
     res.status(400).json({"status":"failed", ...error});
   }
