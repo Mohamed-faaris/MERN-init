@@ -1,8 +1,13 @@
 import dotenv from 'dotenv'; 
 import express from 'express';
-import mongoose from 'mongoose';
 import session from "express-session";
 import passport from "passport";
+import MongoStore from "connect-mongo";
+
+//user defined modules
+import { mongooseConnect } from './utils/databaseHelpers';
+
+
 
 dotenv.config({ path: './config/.env' }); 
 
@@ -30,17 +35,10 @@ app.use(app.use(
   })
 ));
 
+app.use(passport.initialize())
+app.use(passport.session())
 
 
-
-
-async function mongooseConnect() {
-  try {
-    await mongoose.connect(mongoDatabaseURL);
-  } catch (error) {
-    console.error("Connection failed:", error);
-  }
-}
 
 app.get("/", (req, res) => {
     res.send("connected");
@@ -87,6 +85,7 @@ app.put("/editTask", async(req, res) => {
 
 app.listen(SERVER_PORT,async () => {
     console.log(`connecting to mongoDB....`);
-    await mongooseConnect(); 
+    await mongooseConnect();
+    await mongooseConnect(mongoDatabaseURL) 
     console.log(`connected to mongoDB and server is running on http://localhost:${SERVER_PORT}`);
 });
