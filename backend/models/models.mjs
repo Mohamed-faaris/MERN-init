@@ -8,13 +8,14 @@ export const userSchema = new mongoose.Schema(
     batch: { type: Number, required: true }, 
     createdAt: { type: Date, default: () => new Date() },
     passwordHash: { type: String, required: true },
+    role:{ type: Number, required: true },
     groups:[{type:String,ref:"Group"}]
   },
   {
-    _id: false,
     versionKey: false,
   }
 );
+
 
 userSchema.index({ email: 1 });
 
@@ -42,7 +43,6 @@ export const userTaskState = mongoose.Schema(
     status: { type: Number, default: null },
   },
   {
-    _id: false,
     versionKey: false,
   }
 );

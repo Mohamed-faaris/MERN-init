@@ -1,10 +1,10 @@
 import express from 'express';
-import user from '../models/models';
+import user from '../models/models.mjs';
 
 const router  = express.Router()
 
- router.get("/user",async(req,res)=>{
-    res.send(await user.findById(req.body.Id))
+router.get("/user",async(req,res)=>{
+    res.send(await user.findOne(req.body.Id))
 })
 
 router.post("/user",async(req,res)=>{
@@ -42,3 +42,4 @@ router.patch("/user",async(req,res)=>{
     }
 })
 
+export default router
