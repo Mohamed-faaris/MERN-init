@@ -18,9 +18,9 @@ passport.deserializeUser(async (userEmail, done) => {
 });
 
 export default passport.use(
-	new Strategy({usernameField:"email"},async (email, password, done) => {
+	new Strategy({usernameField:"email"},async (userEmail, password, done) => {
 		try {
-			const user = await User.findOne({ email });
+			const user = await User.findOne({ email:userEmail });
 			if (!user) 
                 throw new Error("User not found");
 			if (!comparePassword(password, user.passwordHash))

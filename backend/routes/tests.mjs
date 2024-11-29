@@ -1,31 +1,81 @@
 import { Router } from "express";
-import { User } from "../models/models.mjs";
+import { Group, Task, TaskState, User } from "../models/models.mjs";
 import { hashPassword } from "../utils/passwordHelpers.mjs";
-import { statusStringToInt } from "../utils/enumHelpers.mjs";
+import { roleIntToString, roleStringToInt } from "../utils/enumHelpers.mjs";
+import { ensureAuthenticated } from "../utils/middlewareHelpers.mjs";
 
+const router = Router();
 
-const router  = Router()
+router.post("/createDevUser", async (req, res) => {
+  const user = new User({
+    name: req.body.email,
+    email: `${req.body.email}@test.com`,
+    phone: 123456789,
+    batch: 2023,
+    role: roleStringToInt("dev"),
+    passwordHash: hashPassword(req.body.password),
+  });
+  try {
+    const stats = await user.save();
+    res.status(200).send({ msg: "ok", user: stats });
+  } catch (err) {
+    console.error(err);
+    res.status(400).send({ msg: err.message });
+  }
+});
 
-router.post("/createDevUser",async (req,res)=>{
-    console.log("hello test")
-    console.log(req.body)
-    const user = new User({
-        name: req.body.email,
-        email: `${req.body.email}@test.com`, 
-        phone: 123456789,
-        batch: 2023, 
-        role: statusStringToInt("dev"),
-        passwordHash: hashPassword(req.body.password),
-    })
-    try{
-        const stats = await user.save()
-        res.status(200).send({msg:"ok",user:stats})
-    }
-    catch(err){
-        console.error(err)
-        res.status(400).send({msg:err.message})
-    }
-    
-})
+router.post("/createUser", async (req, res) => {
+  console.log("hello test");
+  console.log(req.body);
+  const user = new User({
+    name: req.body.email,
+    email: `${req.body.email}@test.com`,
+    phone: 123456789,
+    batch: 2023,
+    role: roleStringToInt("dev"),
+    groups: [req.body.group],
+    passwordHash: hashPassword(req.body.password),
+  });
+  try {
+    const group = await Group.findOneAndUpdate(
+      { name: req.body.group },
+      { $push: { members: `${req.body.email}@test.com` } },
+      { upsert: true, new: true }
+    );
+    const stats = await user.save();
+    res.status(200).send({ msg: "ok", user: [stats, group] });
+  } catch (err) {
+    console.error(err);
+    res.status(400).send({ msg: err.message });
+  }
+});
 
-export default router
+router.post("/createTask", ensureAuthenticated, async (req, res) => {
+  try {
+    const task = await Task({
+      title: req.body.title || "error title",
+      description: req.body.description || "error description",
+      createdBy: req.user.email,
+    }).save();
+    const group = await Group.findOneAndUpdate(
+      { name: req.body.group },
+      { $push: { taskKeys: task._id } },
+      { new: true }
+    );
+    const taskStatePromises = group.members.map(async (member) => {
+      const taskState = await TaskState({
+        taskKey: task._id,
+      }).save();
+
+      return User.updateOne(
+        { email: member },
+        { $push: { taskStates: taskState._id } }
+      );
+    });
+    await Promise.all(taskStatePromises);
+  } catch (error) {
+    res.send({ msg: error }).status(400);
+  }
+});
+
+export default router;

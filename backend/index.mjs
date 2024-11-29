@@ -44,6 +44,5 @@ app.use(passport.session())
 app.use('/api',router)
 
 app.listen(SERVER_PORT,async () => {
-    console.log(`connecting to mongoDB....`);
-    console.log(`connected to mongoDB and server is running on http://localhost:${SERVER_PORT}`);
+    console.log(`server is running on http://localhost:${SERVER_PORT}`);
 });
