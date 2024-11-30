@@ -1,4 +1,11 @@
 import mongoose from "mongoose";
+import { statusStringToInt } from "../utils/enumHelpers.mjs";
+
+const taskState = {
+    taskKey: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Task" },
+    lastModifiedAt: { type: Date, default: null },
+    status: { type: Number, default: statusStringToInt("notSeen") },
+};
 
 export const userSchema = new mongoose.Schema(
   {
@@ -10,7 +17,7 @@ export const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     role: { type: Number, required: true },
     groups: [{ type: String, ref: "Group" }],
-    taskStates:[{type: mongoose.Types.ObjectId, ref: "TaskState"}]
+    taskStates:[taskState]
   },
   {
     versionKey: false,
@@ -36,18 +43,6 @@ export const taskSchema = new mongoose.Schema(
 
 export const Task = new mongoose.model("Task", taskSchema);
 
-export const userTaskState = mongoose.Schema(
-  {
-    taskKey: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Task" },
-    lastModifiedAt: { type: Date, default: null },
-    status: { type: Number, default: null },
-  },
-  {
-    versionKey: false
-  }
-);
-
-export const TaskState = new mongoose.model("TaskState", taskSchema);
 
 export const groupSchema = new mongoose.Schema(
   {

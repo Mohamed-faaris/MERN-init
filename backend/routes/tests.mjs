@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { Group, Task, TaskState, User } from "../models/models.mjs";
+import { Group, Task, User } from "../models/models.mjs";
 import { hashPassword } from "../utils/passwordHelpers.mjs";
 import { roleIntToString, roleStringToInt } from "../utils/enumHelpers.mjs";
 import { ensureAuthenticated } from "../utils/middlewareHelpers.mjs";
@@ -25,8 +25,7 @@ router.post("/createDevUser", async (req, res) => {
 });
 
 router.post("/createUser", async (req, res) => {
-  console.log("hello test");
-  console.log(req.body);
+
   const user = new User({
     name: req.body.email,
     email: `${req.body.email}@test.com`,
@@ -63,18 +62,44 @@ router.post("/createTask", ensureAuthenticated, async (req, res) => {
       { new: true }
     );
     const taskStatePromises = group.members.map(async (member) => {
-      const taskState = await TaskState({
-        taskKey: task._id,
-      }).save();
-
-      return User.updateOne(
-        { email: member },
-        { $push: { taskStates: taskState._id } }
-      );
+      return User.findOneAndUpdate(
+        {email:req.body.email},
+        {$push:{taskStates:{taskKey:task._id}}}
+      )
     });
     await Promise.all(taskStatePromises);
+    res.sendStatus(200)
   } catch (error) {
-    res.send({ msg: error }).status(400);
+    res.send({ msg: [error],email:req.user.email }).status(400);
+  }
+});
+
+router.post("/getTask", async (req, res) => {
+  try {
+    console.log("h");
+    const user = await User.findOne({ email: req.body.email });
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const taskStates = user.taskStates;
+    
+    console.log(user._id,await User.findById(user._id))
+    const tasks = await Promise.all(
+      taskStates.map(async (taskState) => {
+        //console.log(taskState,await Task.findById("674a18761b21ccb64efed79b"))
+        return await Task.findById(taskState);
+      })
+    );
+
+    console.log(taskStates,tasks);
+
+    res.status(200).send({ email: req.body.email, tasks: tasks });
+    
+  } catch (error) {
+    console.log(error);
+    res.status(400).send({ msg: error.message });
   }
 });
 
