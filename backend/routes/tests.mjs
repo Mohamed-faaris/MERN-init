@@ -36,12 +36,12 @@ router.post("/createUser", async (req, res) => {
     passwordHash: hashPassword(req.body.password),
   });
   try {
+    const stats = await user.save();
     const group = await Group.findOneAndUpdate(
       { name: req.body.group },
       { $push: { members: `${req.body.email}@test.com` } },
       { upsert: true, new: true }
     );
-    const stats = await user.save();
     res.status(200).send({ msg: "ok", user: [stats, group] });
   } catch (err) {
     console.error(err);
@@ -49,58 +49,59 @@ router.post("/createUser", async (req, res) => {
   }
 });
 
-router.post("/createTask", ensureAuthenticated, async (req, res) => {
+router.post("/createTask", async (req, res) => {
   try {
     const task = await Task({
       title: req.body.title || "error title",
       description: req.body.description || "error description",
-      createdBy: req.user.email,
+      createdBy: "test",
     }).save();
     const group = await Group.findOneAndUpdate(
       { name: req.body.group },
       { $push: { taskKeys: task._id } },
       { new: true }
     );
+    console.log(group)
     const taskStatePromises = group.members.map(async (member) => {
+      console.log(member)
       return User.findOneAndUpdate(
-        {email:req.body.email},
+        {email:member},
         {$push:{taskStates:{taskKey:task._id}}}
       )
     });
     await Promise.all(taskStatePromises);
-    res.sendStatus(200)
+    res.send("task created").status(200);
   } catch (error) {
-    res.send({ msg: [error],email:req.user.email }).status(400);
+    console.log(error);
+    res.send({ 
+      msg: error.message || "An error occurred while creating the task", 
+      email: req.user.email 
+  }).status(400);
   }
 });
 
 router.post("/getTask", async (req, res) => {
   try {
-    console.log("h");
     const user = await User.findOne({ email: req.body.email });
-    
+
     if (!user) {
       throw new Error("User not found");
     }
-    
-    const taskStates = user.taskStates;
-    
-    console.log(user._id,await User.findById(user._id))
+
     const tasks = await Promise.all(
-      taskStates.map(async (taskState) => {
-        //console.log(taskState,await Task.findById("674a18761b21ccb64efed79b"))
-        return await Task.findById(taskState);
+      user.taskStates.map(async (taskState) => {
+        return await Task.findById(taskState.taskKey); 
       })
     );
-
-    console.log(taskStates,tasks);
-
-    res.status(200).send({ email: req.body.email, tasks: tasks });
     
+    res.status(200).send({ email: req.body.email, tasks: tasks });
+
   } catch (error) {
     console.log(error);
-    res.status(400).send({ msg: error.message });
+    res.status(400).send({ msg: error.message || "An error occurred while retrieving tasks." });
   }
 });
+
+
 
 export default router;
